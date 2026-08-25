@@ -104,7 +104,7 @@ export default function ContainersQRStationPage() {
             <div class="sticker-red-band">⚠ RESTRICTED ZONE · AUTHORISED BIOMETRIC ACCESS ONLY ⚠</div>
             <div class="sticker-body">
               <div class="sticker-container-id">
-                <div class="sticker-container-label">SAFESTACK™ BOX CONTAINER UNIT</div>
+                <div class="sticker-container-label">SYS-HUB™ BOX CONTAINER UNIT</div>
                 ${name}
               </div>
               <div class="sticker-meta-row">
@@ -118,7 +118,7 @@ export default function ContainersQRStationPage() {
                   <div class="sticker-scan-sub">
                     Point phone camera at QR code. The biometric facial recognition system will auto-identify personnel and log access. No manual input required.
                   </div>
-                  <div class="sticker-compliance-badge">SAFESTACK™ · ISO-45001 · ZERO-INPUT TELEMETRY</div>
+                  <div class="sticker-compliance-badge">SYS-HUB™ · ISO-45001 · ZERO-INPUT TELEMETRY</div>
                 </div>
               </div>
               <div class="sticker-meta-row sticker-meta-bordered">
@@ -128,7 +128,7 @@ export default function ContainersQRStationPage() {
               </div>
             </div>
             <div class="sticker-footer">
-              <span>SAFESTACK™ BIOMETRIC TELEMETRY SYSTEM · SS-${num}</span>
+              <span>SYS-HUB™ BIOMETRIC TELEMETRY SYSTEM · SS-${num}</span>
               <span class="sticker-footer-right">OSHA 1910 ✓ | ISO-45001 ✓</span>
             </div>
             <div class="sticker-hazard-stripe-bottom"></div>
@@ -142,7 +142,7 @@ export default function ContainersQRStationPage() {
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<title>SAFESTACK™ — A4 Sticker Placards</title>
+<title>SYS-HUB™ — A4 Sticker Placards</title>
 <style>
   * { box-sizing: border-box; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
   html, body { margin: 0; padding: 0; background: #fff; font-family: Arial, sans-serif; }
@@ -343,7 +343,7 @@ export default function ContainersQRStationPage() {
                           Point phone camera at QR code. Biometric facial scan auto-identifies personnel. Zero-input required.
                         </div>
                         <div style={{ border: '1.5px solid #000', display: 'inline-block', padding: '2px 5px', fontSize: 5, fontWeight: 900, textTransform: 'uppercase', letterSpacing: 1 }}>
-                          SAFESTACK™ · ISO-45001
+                          SYS-HUB™ · ISO-45001
                         </div>
                       </div>
                     </div>
@@ -355,7 +355,7 @@ export default function ContainersQRStationPage() {
                   </div>
                   {/* Footer bar */}
                   <div style={{ background: '#111', color: 'white', display: 'flex', justifyContent: 'space-between', padding: '4px 10px', fontSize: 6, fontWeight: 700, letterSpacing: 0.5 }}>
-                    <span>SAFESTACK™ BIOMETRIC TELEMETRY SYSTEM</span>
+                    <span>SYS-HUB™ BIOMETRIC TELEMETRY SYSTEM</span>
                     <span style={{ color: '#f59e0b' }}>OSHA 1910 ✓</span>
                   </div>
                   {/* Bottom hazard stripe */}
