@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState, useMemo } from 'react';
 import { supabase, AccessLogRecord, WorkerRecord } from '@/lib/supabaseClient';
+import * as XLSX from 'xlsx';
 import {
   FileCheck,
   Activity,
@@ -12,6 +13,7 @@ import {
   TrendingUp,
   Award,
   HardHat,
+  FileSpreadsheet,
 } from 'lucide-react';
 
 type JoinedWorker = { name: string; role?: string; photo_url?: string };
@@ -142,6 +144,46 @@ export default function ManagementReportsPage() {
       minute: '2-digit',
     });
 
+  const handleExportExcel = () => {
+    if (timeframeLogs.length === 0) return;
+
+    const excelData = timeframeLogs.map((l) => {
+      const rawNotes = l.notes || '';
+      const ppeUses = rawNotes.includes('PPE')
+        ? rawNotes.replace('[PPE VERIFIED: ', '').replace(']', '')
+        : 'Hard Hat, Full Body Harness, Protective Gloves, Safety Shoes';
+
+      const d = new Date(l.scanned_at);
+      const pad = (n: number) => (n < 10 ? '0' + n : n);
+      const formattedTimestamp = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+
+      return {
+        'Worker Personnel': l.workers?.name || 'Unknown Worker',
+        'Assigned Role': l.workers?.role || 'Standard Crew',
+        'Container Unit': l.containers?.container_number || 'Unknown Unit',
+        'Activity Task': l.activity || 'Routine Stack Inspection',
+        'PPE Safety Gear Uses': ppeUses,
+        Timestamp: formattedTimestamp,
+      };
+    });
+
+    const worksheet = XLSX.utils.json_to_sheet(excelData);
+    worksheet['!cols'] = [
+      { wch: 24 },
+      { wch: 24 },
+      { wch: 18 },
+      { wch: 34 },
+      { wch: 60 },
+      { wch: 22 },
+    ];
+
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Audit Logs');
+
+    const dateStr = new Date().toISOString().substring(0, 10);
+    XLSX.writeFile(workbook, `AUDIT_LOGS_${reportTimeframe.toUpperCase()}_${dateStr}.xlsx`);
+  };
+
   return (
     <AdminGuard>
       <div className="max-w-7xl mx-auto w-full px-3 sm:px-6 py-6 space-y-6 font-mono">
@@ -222,6 +264,14 @@ export default function ManagementReportsPage() {
               className="px-2.5 py-1 bg-[#07090e] border border-amber-500 rounded-lg text-xs text-white focus:outline-none cursor-pointer"
             />
           )}
+
+          <button
+            onClick={handleExportExcel}
+            className="px-3.5 py-1.5 rounded-lg text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white flex items-center gap-1.5 shadow-md transition-all cursor-pointer"
+          >
+            <FileSpreadsheet className="w-3.5 h-3.5" />
+            <span>EXPORT EXCEL (.XLSX)</span>
+          </button>
 
           <button
             onClick={() => window.print()}

@@ -183,26 +183,24 @@ export default function AdminDashboardPage() {
   const handleExportExcel = () => {
     if (filteredLogs.length === 0) return;
 
-    // Build worksheet data
-    const excelData = filteredLogs.map((l, index) => {
+    // Build clean worksheet data without user or biometric IDs
+    const excelData = filteredLogs.map((l) => {
       const rawNotes = l.notes || '';
       const ppeUses = rawNotes.includes('PPE')
         ? rawNotes.replace('[PPE VERIFIED: ', '').replace(']', '')
-        : 'Hard Hat, Harness, Gloves, Safety Shoes';
+        : 'Hard Hat, Full Body Harness, Protective Gloves, Safety Shoes';
+
+      const d = new Date(l.scanned_at);
+      const pad = (n: number) => (n < 10 ? '0' + n : n);
+      const formattedTimestamp = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
 
       return {
-        'No.': index + 1,
-        'Log Reference ID': l.id,
-        'Worker Personnel': l.workers?.name || 'Unknown',
-        'Assigned Safety Role': l.workers?.role || 'Standard Crew',
-        'Worker ID': l.worker_id,
-        'Box Container Unit': l.containers?.container_number || 'Unknown Unit',
+        'Worker Personnel': l.workers?.name || 'Unknown Worker',
+        'Assigned Role': l.workers?.role || 'Standard Crew',
+        'Container Unit': l.containers?.container_number || 'Unknown Unit',
         'Activity Task': l.activity || 'Routine Stack Inspection',
         'PPE Safety Gear Uses': ppeUses,
-        'Local Time': new Date(l.scanned_at).toLocaleTimeString(),
-        'Date (YYYY-MM-DD)': new Date(l.scanned_at).toISOString().substring(0, 10),
-        'ISO Timestamp': l.scanned_at,
-        'Compliance Status': 'VERIFIED BIOMETRIC PASS',
+        Timestamp: formattedTimestamp,
       };
     });
 
@@ -210,24 +208,18 @@ export default function AdminDashboardPage() {
 
     // Auto-fit column widths
     const columnWidths = [
-      { wch: 5 },
-      { wch: 36 },
-      { wch: 24 },
-      { wch: 20 },
-      { wch: 36 },
-      { wch: 20 },
-      { wch: 32 },
-      { wch: 36 },
-      { wch: 14 },
-      { wch: 18 },
-      { wch: 24 },
-      { wch: 26 },
+      { wch: 24 }, // Worker Personnel
+      { wch: 24 }, // Assigned Role
+      { wch: 18 }, // Container Unit
+      { wch: 34 }, // Activity Task
+      { wch: 60 }, // PPE Safety Gear Uses
+      { wch: 22 }, // Timestamp
     ];
     worksheet['!cols'] = columnWidths;
 
     // Create workbook and append sheet
     const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, 'Access Audit Telemetry');
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Audit Logs');
 
     // Create secondary Summary sheet
     const summaryData = [
@@ -243,7 +235,7 @@ export default function AdminDashboardPage() {
 
     // Write file
     const dateStr = new Date().toISOString().substring(0, 10);
-    XLSX.writeFile(workbook, `SAFESTACK_AUDIT_REPORT_${dateStr}.xlsx`);
+    XLSX.writeFile(workbook, `AUDIT_LOGS_${dateStr}.xlsx`);
   };
 
   return (
