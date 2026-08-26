@@ -13,17 +13,29 @@ import {
   ScanLine,
   Lock,
   LogOut,
+  Sun,
+  Moon,
 } from 'lucide-react';
 
 export default function Navbar() {
   const router = useRouter();
   const [isAdmin, setIsAdmin] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [theme, setTheme] = useState<'dark' | 'light'>('dark');
 
   useEffect(() => {
     const hydrate = () => {
       setMounted(true);
       setIsAdmin(isAdminAuthenticated());
+      const saved = (localStorage.getItem('sys_hub_theme') as 'dark' | 'light') || 'dark';
+      setTheme(saved);
+      if (saved === 'light') {
+        document.documentElement.classList.remove('dark');
+        document.documentElement.classList.add('light');
+      } else {
+        document.documentElement.classList.remove('light');
+        document.documentElement.classList.add('dark');
+      }
     };
     const t = setTimeout(hydrate, 0);
 
@@ -37,6 +49,19 @@ export default function Navbar() {
       window.removeEventListener('safestack_auth_change', handleAuthChange);
     };
   }, []);
+
+  const toggleTheme = () => {
+    const nextTheme = theme === 'dark' ? 'light' : 'dark';
+    setTheme(nextTheme);
+    localStorage.setItem('sys_hub_theme', nextTheme);
+    if (nextTheme === 'light') {
+      document.documentElement.classList.remove('dark');
+      document.documentElement.classList.add('light');
+    } else {
+      document.documentElement.classList.remove('light');
+      document.documentElement.classList.add('dark');
+    }
+  };
 
   const handleLogout = () => {
     logoutAdmin();
@@ -57,7 +82,7 @@ export default function Navbar() {
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <span className="font-extrabold text-sm sm:text-base tracking-tight text-white font-mono">
+              <span className="font-extrabold text-sm sm:text-base tracking-tight text-gray-400 font-mono">
                 SYS-HUB<span className="text-amber-400">::WAREHOUSE</span>
               </span>
               <span className="hidden sm:inline-block px-1.5 py-0.5 rounded text-[9px] font-mono font-bold bg-amber-500/15 text-amber-400 border border-amber-500/30 uppercase tracking-wider">
@@ -79,7 +104,7 @@ export default function Navbar() {
             <>
               <Link
                 href="/admin/dashboard"
-                className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-300 hover:text-white hover:bg-slate-800/80 border border-transparent hover:border-slate-700 transition-all"
+                className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-semibold text-gray-400 hover:text-gray-200 hover:bg-slate-800/80 border border-transparent hover:border-slate-700 transition-all"
               >
                 <LayoutDashboard className="w-3.5 h-3.5 text-sky-400" />
                 <span className="hidden md:inline">LIVE TELEMETRY</span>
@@ -87,7 +112,7 @@ export default function Navbar() {
 
               <Link
                 href="/admin/reports"
-                className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-300 hover:text-white hover:bg-slate-800/80 border border-transparent hover:border-slate-700 transition-all"
+                className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-semibold text-gray-400 hover:text-gray-200 hover:bg-slate-800/80 border border-transparent hover:border-slate-700 transition-all"
               >
                 <FileCheck className="w-3.5 h-3.5 text-amber-400" />
                 <span className="hidden md:inline">REPORTS</span>
@@ -95,7 +120,7 @@ export default function Navbar() {
 
               <Link
                 href="/admin/register"
-                className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-300 hover:text-white hover:bg-slate-800/80 border border-transparent hover:border-slate-700 transition-all"
+                className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-semibold text-gray-400 hover:text-gray-200 hover:bg-slate-800/80 border border-transparent hover:border-slate-700 transition-all"
               >
                 <UserPlus className="w-3.5 h-3.5 text-emerald-400" />
                 <span className="hidden md:inline">ENROLLMENT</span>
@@ -103,7 +128,7 @@ export default function Navbar() {
 
               <Link
                 href="/admin/containers"
-                className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-300 hover:text-white hover:bg-slate-800/80 border border-transparent hover:border-slate-700 transition-all"
+                className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-semibold text-gray-400 hover:text-gray-200 hover:bg-slate-800/80 border border-transparent hover:border-slate-700 transition-all"
               >
                 <QrCode className="w-3.5 h-3.5 text-amber-400" />
                 <span className="hidden md:inline">QR PLACARDS</span>
@@ -126,7 +151,7 @@ export default function Navbar() {
               <button
                 onClick={handleLogout}
                 title="Log out of Admin mode"
-                className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-bold bg-slate-900 hover:bg-rose-950/80 text-slate-300 hover:text-rose-300 border border-slate-800 hover:border-rose-800 transition-all cursor-pointer"
+                className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-bold bg-slate-900 hover:bg-rose-950/80 text-gray-400 hover:text-rose-300 border border-slate-800 hover:border-rose-800 transition-all cursor-pointer"
               >
                 <LogOut className="w-3.5 h-3.5" />
                 <span className="hidden sm:inline">LOGOUT</span>
@@ -134,12 +159,27 @@ export default function Navbar() {
             ) : (
               <Link
                 href="/admin/login"
-                className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-bold bg-[#07090e] hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-700 transition-all cursor-pointer"
+                className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-bold bg-[#07090e] hover:bg-slate-800 text-gray-400 hover:text-gray-200 border border-slate-700 transition-all cursor-pointer"
               >
                 <Lock className="w-3.5 h-3.5 text-amber-400" />
                 <span className="hidden sm:inline">ADMIN LOGIN</span>
               </Link>
             )
+          )}
+
+          {/* Theme Light / Dark Mode Toggle Button */}
+          {mounted && (
+            <button
+              onClick={toggleTheme}
+              title={`Switch to ${theme === 'dark' ? 'Light' : 'Dark'} Mode`}
+              className="flex items-center justify-center p-2 rounded-lg border border-slate-800 bg-[#07090e] hover:bg-slate-800 text-amber-400 transition-all cursor-pointer"
+            >
+              {theme === 'dark' ? (
+                <Sun className="w-4 h-4 text-amber-400" />
+              ) : (
+                <Moon className="w-4 h-4 text-sky-400" />
+              )}
+            </button>
           )}
         </nav>
       </div>

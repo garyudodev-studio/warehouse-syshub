@@ -25,6 +25,11 @@ import {
   RefreshCw,
   Search,
   KeyRound,
+  Calendar,
+  X,
+  ChevronLeft,
+  ChevronRight,
+  ArrowUp,
 } from 'lucide-react';
 
 export default function HomePage() {
@@ -34,6 +39,10 @@ export default function HomePage() {
   const [loading, setLoading] = useState(true);
   const [selectedContainerFilter, setSelectedContainerFilter] = useState<string>('all');
   const [searchTerm, setSearchTerm] = useState('');
+  const [selectedDate, setSelectedDate] = useState<string>('');
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [showBackToTop, setShowBackToTop] = useState<boolean>(false);
+  const ITEMS_PER_PAGE = 21;
 
   const fetchPublicTelemetry = useCallback(async () => {
     try {
@@ -110,6 +119,19 @@ export default function HomePage() {
     };
   }, [fetchPublicTelemetry]);
 
+  // Scroll listener for floating Back to Top button
+  useEffect(() => {
+    const handleScroll = () => {
+      if (window.scrollY > 300) {
+        setShowBackToTop(true);
+      } else {
+        setShowBackToTop(false);
+      }
+    };
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
   // Statistics
   const todayStr = new Date().toDateString();
   const todayLogs = logs.filter((l) => new Date(l.scanned_at).toDateString() === todayStr);
@@ -140,9 +162,31 @@ export default function HomePage() {
       const matchesContainer =
         selectedContainerFilter === 'all' || log.container_id === selectedContainerFilter;
 
-      return matchesSearch && matchesContainer;
+      let matchesDate = true;
+      if (selectedDate) {
+        const d = new Date(log.scanned_at);
+        const yyyy = d.getFullYear();
+        const mm = String(d.getMonth() + 1).padStart(2, '0');
+        const dd = String(d.getDate()).padStart(2, '0');
+        const logDateStr = `${yyyy}-${mm}-${dd}`;
+        matchesDate = logDateStr === selectedDate;
+      }
+
+      return matchesSearch && matchesContainer && matchesDate;
     });
-  }, [logs, searchTerm, selectedContainerFilter]);
+  }, [logs, searchTerm, selectedContainerFilter, selectedDate]);
+
+  // Reset pagination when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, selectedContainerFilter, selectedDate]);
+
+  // Paginated Logs (21 items per page)
+  const totalPages = Math.ceil(filteredLogs.length / ITEMS_PER_PAGE) || 1;
+  const paginatedLogs = useMemo(() => {
+    const startIdx = (currentPage - 1) * ITEMS_PER_PAGE;
+    return filteredLogs.slice(startIdx, startIdx + ITEMS_PER_PAGE);
+  }, [filteredLogs, currentPage]);
 
   return (
     <div className="flex-1 w-full max-w-7xl mx-auto px-3 sm:px-6 py-8 space-y-8 font-mono">
@@ -305,11 +349,14 @@ export default function HomePage() {
           <div className="flex items-center gap-2 text-white font-bold">
             <Activity className="w-4 h-4 text-emerald-400 animate-pulse" />
             <span>LIVE CONTAINER AUDIT FEED (PUBLIC TELEMETRY)</span>
+            <span className="text-[10px] text-slate-400 font-mono font-normal">
+              ({filteredLogs.length} {filteredLogs.length === 1 ? 'EVENT' : 'EVENTS'})
+            </span>
           </div>
 
           {/* Filter Bar */}
-          <div className="flex items-center gap-2">
-            <div className="relative w-48 sm:w-64">
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="relative w-44 sm:w-56">
               <Search className="w-3.5 h-3.5 text-slate-500 absolute left-2.5 top-1/2 -translate-y-1/2" />
               <input
                 type="text"
@@ -320,10 +367,31 @@ export default function HomePage() {
               />
             </div>
 
+            {/* Date Pick Filter */}
+            <div className="flex items-center gap-1.5 bg-[#0a0d16] border border-slate-800 rounded-lg px-2.5 py-1">
+              <Calendar className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+              <input
+                type="date"
+                value={selectedDate}
+                onChange={(e) => setSelectedDate(e.target.value)}
+                title="Filter pick by date"
+                className="bg-transparent text-xs text-white focus:outline-none cursor-pointer font-sans [color-scheme:dark]"
+              />
+              {selectedDate && (
+                <button
+                  onClick={() => setSelectedDate('')}
+                  title="Clear date filter"
+                  className="text-slate-400 hover:text-white p-0.5 rounded transition-colors cursor-pointer"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
+
             <button
               onClick={fetchPublicTelemetry}
               title="Refresh stream"
-              className="p-1.5 rounded-lg bg-[#0f1420] hover:bg-slate-800 border border-slate-800 text-slate-300 transition-colors"
+              className="p-1.5 rounded-lg bg-[#0f1420] hover:bg-slate-800 border border-slate-800 text-slate-300 transition-colors cursor-pointer"
             >
               <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
             </button>
@@ -340,7 +408,9 @@ export default function HomePage() {
             <ShieldCheck className="w-8 h-8 text-slate-700 mx-auto" />
             <p className="font-bold text-slate-400">NO RECENT ACCESS EVENTS</p>
             <p className="text-[11px] font-sans">
-              Staff workers can scan containers to record new biometric activity.
+              {selectedDate || searchTerm || selectedContainerFilter !== 'all'
+                ? 'No audit logs matched your active search or date filter.'
+                : 'Staff workers can scan containers to record new biometric activity.'}
             </p>
           </div>
         ) : (
@@ -357,7 +427,7 @@ export default function HomePage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-800/60">
-                {filteredLogs.slice(0, 35).map((log) => {
+                {paginatedLogs.map((log) => {
                   const workerName = log.workers?.name || 'Unknown';
                   const workerRole = log.workers?.role || 'Crew';
                   const photoUrl = log.workers?.photo_url;
@@ -452,7 +522,59 @@ export default function HomePage() {
             </table>
           </div>
         )}
+
+        {/* Pagination Controls (21 display data per page) */}
+        {filteredLogs.length > 0 && (
+          <div className="p-4 border-t border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-3 bg-[#07090e] text-slate-400 text-xs">
+            <div className="font-mono text-[11px]">
+              Showing{' '}
+              <span className="font-bold text-white">
+                {Math.min((currentPage - 1) * ITEMS_PER_PAGE + 1, filteredLogs.length)}
+              </span>{' '}
+              to{' '}
+              <span className="font-bold text-white">
+                {Math.min(currentPage * ITEMS_PER_PAGE, filteredLogs.length)}
+              </span>{' '}
+              of <span className="font-bold text-amber-400">{filteredLogs.length}</span> audit logs
+            </div>
+
+            <div className="flex items-center gap-1.5">
+              <button
+                onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+                disabled={currentPage === 1}
+                className="px-2.5 py-1 rounded-lg border border-slate-800 bg-[#0a0d16] hover:bg-slate-800 text-slate-300 disabled:opacity-40 disabled:hover:bg-[#0a0d16] transition-all flex items-center gap-1 font-bold text-xs cursor-pointer disabled:cursor-not-allowed"
+              >
+                <ChevronLeft className="w-3.5 h-3.5" />
+                <span>PREV</span>
+              </button>
+
+              <span className="px-3 py-1 text-xs font-mono font-bold text-white bg-slate-900 rounded-lg border border-slate-800">
+                {currentPage} / {totalPages}
+              </span>
+
+              <button
+                onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
+                disabled={currentPage === totalPages}
+                className="px-2.5 py-1 rounded-lg border border-slate-800 bg-[#0a0d16] hover:bg-slate-800 text-slate-300 disabled:opacity-40 disabled:hover:bg-[#0a0d16] transition-all flex items-center gap-1 font-bold text-xs cursor-pointer disabled:cursor-not-allowed"
+              >
+                <span>NEXT</span>
+                <ChevronRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          </div>
+        )}
       </div>
+
+      {/* Floating Back to Top Button */}
+      {showBackToTop && (
+        <button
+          onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+          title="Back to Top"
+          className="fixed bottom-6 right-6 z-50 p-3 rounded-full bg-amber-500 hover:bg-amber-400 text-slate-950 shadow-2xl shadow-amber-500/30 border border-amber-400/50 transition-all duration-200 hover:scale-110 active:scale-95 cursor-pointer flex items-center justify-center group"
+        >
+          <ArrowUp className="w-5 h-5 stroke-[2.5] group-hover:-translate-y-0.5 transition-transform" />
+        </button>
+      )}
     </div>
   );
 }

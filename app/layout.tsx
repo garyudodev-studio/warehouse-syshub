@@ -31,7 +31,28 @@ export default function RootLayout({
     <html
       lang="en"
       className={`${sans.variable} ${mono.variable} h-full dark`}
+      suppressHydrationWarning
     >
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function() {
+                try {
+                  var saved = localStorage.getItem('sys_hub_theme');
+                  if (saved === 'light') {
+                    document.documentElement.classList.remove('dark');
+                    document.documentElement.classList.add('light');
+                  } else {
+                    document.documentElement.classList.remove('light');
+                    document.documentElement.classList.add('dark');
+                  }
+                } catch (e) {}
+              })();
+            `,
+          }}
+        />
+      </head>
       <body className="min-h-full flex flex-col bg-[#07090e] text-slate-200 font-sans selection:bg-amber-500 selection:text-black">
         {/* Sticky Black Yellow Safety Hazard Stripe Banner at top */}
         <div className="sticky top-0 z-[60] h-2.5 w-full hazard-stripes shadow-lg" />
