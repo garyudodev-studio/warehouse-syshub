@@ -33,6 +33,23 @@ const PRESET_ACTIVITIES = [
   'Maintenance & Repair',
 ];
 
+interface PpeItem {
+  id: string;
+  label: string;
+  spec: string;
+}
+
+const STANDARD_PPE_ITEMS: PpeItem[] = [
+  { id: 'helmet', label: 'Hard Hat / Safety Helmet', spec: 'OSHA Z89.1 Approved' },
+  { id: 'harness', label: 'Full Body Fall Protection Harness', spec: 'OSHA 1926.502 Lashing' },
+  { id: 'gloves', label: 'Heavy-Duty Protective Gloves', spec: 'ANSI Cut Level 3+' },
+  { id: 'shoes', label: 'Safety Shoes', spec: 'ASTM F2413 Certified' },
+];
+
+const getRequiredPpeForActivity = (_activity: string): PpeItem[] => {
+  return STANDARD_PPE_ITEMS;
+};
+
 export default function PersonnelScanSelectorPage() {
   const router = useRouter();
   const [containers, setContainers] = useState<ContainerRecord[]>([]);
@@ -43,6 +60,9 @@ export default function PersonnelScanSelectorPage() {
   const [showCustomActivity, setShowCustomActivity] = useState<boolean>(false);
   const [customActivity, setCustomActivity] = useState<string>('');
 
+  // PPE Verification State
+  const [checkedPpe, setCheckedPpe] = useState<Record<string, boolean>>({});
+
   // Camera QR Scanner Modal State
   const [showQrModal, setShowQrModal] = useState(false);
   const [cameraError, setCameraError] = useState<string | null>(null);
@@ -50,6 +70,27 @@ export default function PersonnelScanSelectorPage() {
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+
+  const activeActivityName =
+    showCustomActivity && customActivity.trim() ? customActivity.trim() : selectedActivity;
+  const currentRequiredPpe = getRequiredPpeForActivity(activeActivityName);
+
+  const checkedCount = currentRequiredPpe.filter((item) => checkedPpe[item.id]).length;
+  const isPpeVerified = checkedCount === currentRequiredPpe.length && currentRequiredPpe.length > 0;
+  const ppePercentage = Math.round((checkedCount / (currentRequiredPpe.length || 1)) * 100);
+
+  const togglePpe = (id: string) => {
+    setCheckedPpe((prev) => ({ ...prev, [id]: !prev[id] }));
+  };
+
+  const verifyAllPpe = () => {
+    const all: Record<string, boolean> = {};
+    currentRequiredPpe.forEach((item) => {
+      all[item.id] = true;
+    });
+    setCheckedPpe(all);
+    sounds.playAccessGranted();
+  };
 
   // Fetch Box Containers
   useEffect(() => {
@@ -76,7 +117,6 @@ export default function PersonnelScanSelectorPage() {
   const parseContainerFromQr = useCallback((qrData: string): string | null => {
     try {
       let raw = qrData.trim();
-      // If full URL e.g. http://localhost:3000/log/Container%2001
       if (raw.includes('/log/')) {
         const parts = raw.split('/log/');
         if (parts[1]) {
@@ -85,7 +125,6 @@ export default function PersonnelScanSelectorPage() {
         }
       }
 
-      // Check if matches container list
       const matched = containers.find(
         (c) => c.container_number.toLowerCase() === raw.toLowerCase()
       );
@@ -145,7 +184,6 @@ export default function PersonnelScanSelectorPage() {
                   setSelectedContainer(detectedContainer);
                   setScannedResult(detectedContainer);
 
-                  // Auto-close modal after 1.2s
                   setTimeout(() => {
                     setShowQrModal(false);
                     setScannedResult(null);
@@ -183,12 +221,23 @@ export default function PersonnelScanSelectorPage() {
   }, [showQrModal, parseContainerFromQr]);
 
   const handleStartScan = () => {
-    const finalActivity =
-      showCustomActivity && customActivity.trim() ? customActivity.trim() : selectedActivity;
+    if (!isPpeVerified) {
+      alert('Safety Warning: Personnel must verify 100% of required PPE items before starting biometric scan.');
+      return;
+    }
+    const finalActivity = activeActivityName;
+    const verifiedPpeNames = currentRequiredPpe
+      .filter((item) => checkedPpe[item.id])
+      .map((item) => item.label)
+      .join(', ');
+
     const encodedContainer = encodeURIComponent(selectedContainer);
     const encodedActivity = encodeURIComponent(finalActivity);
-    router.push(`/log/${encodedContainer}?activity=${encodedActivity}`);
+    const encodedPpeItems = encodeURIComponent(verifiedPpeNames);
+
+    router.push(`/log/${encodedContainer}?activity=${encodedActivity}&ppe=verified&ppeItems=${encodedPpeItems}`);
   };
+
 
   const filteredContainers = containers.filter((c) =>
     c.container_number.toLowerCase().includes(searchTerm.toLowerCase())
@@ -340,20 +389,138 @@ export default function PersonnelScanSelectorPage() {
               )}
             </div>
           </div>
+        </div>
+      </div>
+
+      {/* ======================================================== */}
+      {/* = Step 3: MANDATORY PPE SAFETY VERIFICATION & LAUNCH == */}
+      {/* ======================================================== */}
+      <div className="p-6 rounded-2xl bg-[#0a0d16] border-2 border-slate-800 space-y-5 shadow-2xl">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800 pb-4">
+          <div className="flex items-center gap-2.5">
+            <div className="p-2 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-400">
+              <HardHat className="w-5 h-5 stroke-[2.5]" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-bold text-white uppercase tracking-wider font-mono">
+                  3. MANDATORY PPE SAFETY VERIFICATION
+                </span>
+                <span className="px-2 py-0.5 rounded text-[9px] font-black bg-amber-500/15 text-amber-400 border border-amber-500/30 font-mono uppercase">
+                  OSHA 1910 COMPLIANT
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-400 mt-0.5">
+                Personnel must verify mandatory safety gear required for <strong className="text-amber-300">{activeActivityName}</strong> before launching biometric scanner.
+              </p>
+            </div>
+          </div>
+
+          <button
+            onClick={verifyAllPpe}
+            className="px-3.5 py-2 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/40 text-emerald-300 text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer shrink-0"
+          >
+            <ShieldCheck className="w-4 h-4 text-emerald-400" />
+            <span>VERIFY ALL REQUIRED PPE</span>
+          </button>
+        </div>
+
+        {/* PPE Requirements Grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {currentRequiredPpe.map((item) => {
+            const isChecked = !!checkedPpe[item.id];
+            return (
+              <button
+                key={item.id}
+                onClick={() => togglePpe(item.id)}
+                className={`p-3.5 rounded-xl border text-left transition-all flex items-center justify-between gap-3 cursor-pointer ${
+                  isChecked
+                    ? 'bg-emerald-950/40 border-emerald-500/80 text-white shadow-md'
+                    : 'bg-[#07090e] border-slate-800 text-slate-400 hover:border-slate-700'
+                }`}
+              >
+                <div className="space-y-0.5">
+                  <div className="text-xs font-bold font-sans flex items-center gap-2">
+                    <span className={isChecked ? 'text-emerald-300 font-bold' : 'text-slate-300'}>
+                      {item.label}
+                    </span>
+                  </div>
+                  <div className="text-[10px] text-slate-500 font-mono">{item.spec}</div>
+                </div>
+
+                <div
+                  className={`w-6 h-6 rounded-lg border flex items-center justify-center shrink-0 transition-all ${
+                    isChecked
+                      ? 'bg-emerald-500 border-emerald-400 text-slate-950 font-black'
+                      : 'bg-slate-900 border-slate-700 text-transparent'
+                  }`}
+                >
+                  <Check className="w-4 h-4 stroke-[3]" />
+                </div>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* PPE Progress Bar & Launch Control */}
+        <div className="pt-3 border-t border-slate-800/80 space-y-4">
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between text-xs font-mono">
+              <span className="text-slate-400 font-bold flex items-center gap-2">
+                {isPpeVerified ? (
+                  <span className="text-emerald-400 flex items-center gap-1.5">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                    <span>PPE COMPLIANCE STATUS: 100% VERIFIED</span>
+                  </span>
+                ) : (
+                  <span className="text-amber-400 flex items-center gap-1.5">
+                    <AlertTriangle className="w-4 h-4 text-amber-400" />
+                    <span>PPE COMPLIANCE STATUS: {checkedCount} / {currentRequiredPpe.length} ITEMS VERIFIED</span>
+                  </span>
+                )}
+              </span>
+              <span className={`font-black ${isPpeVerified ? 'text-emerald-400' : 'text-amber-400'}`}>
+                {ppePercentage}%
+              </span>
+            </div>
+
+            {/* Progress bar background */}
+            <div className="w-full h-2 bg-slate-900 rounded-full overflow-hidden border border-slate-800">
+              <div
+                className={`h-full transition-all duration-300 ${
+                  isPpeVerified ? 'bg-emerald-500 shadow-[0_0_12px_#10b981]' : 'bg-amber-500'
+                }`}
+                style={{ width: `${ppePercentage}%` }}
+              />
+            </div>
+          </div>
 
           {/* Launch Button */}
-          <div className="space-y-3 pt-2 border-t border-slate-800">
+          <div className="space-y-2">
             <button
               onClick={handleStartScan}
-              className="w-full py-3.5 px-4 rounded-xl text-sm font-black bg-amber-500 hover:bg-amber-400 text-slate-950 flex items-center justify-center gap-2 shadow-lg shadow-amber-500/20 transition-all active:scale-98 cursor-pointer uppercase tracking-wider"
+              disabled={!isPpeVerified}
+              className={`w-full py-4 px-5 rounded-xl text-sm font-black flex items-center justify-center gap-2.5 transition-all uppercase tracking-wider cursor-pointer ${
+                isPpeVerified
+                  ? 'bg-amber-500 hover:bg-amber-400 text-slate-950 shadow-xl shadow-amber-500/20 active:scale-98'
+                  : 'bg-slate-800 text-slate-500 border border-slate-700 cursor-not-allowed opacity-60'
+              }`}
             >
-              <ScanLine className="w-4 h-4 stroke-[2.5]" />
-              <span>START PERSONNEL SCAN</span>
-              <ArrowRight className="w-4 h-4" />
+              <ScanLine className="w-5 h-5 stroke-[2.5]" />
+              <span>
+                {isPpeVerified
+                  ? `LAUNCH BIOMETRIC SCANNER (${selectedContainer})`
+                  : 'COMPLETE PPE VERIFICATION TO UNLOCK SCANNER'}
+              </span>
+              <ArrowRight className="w-5 h-5" />
             </button>
-            <div className="text-[10px] text-slate-500 text-center">
-              Opens Zero-Input Facial Biometric Camera Scanner
-            </div>
+
+            {!isPpeVerified && (
+              <div className="text-[11px] text-amber-400/90 text-center font-mono flex items-center justify-center gap-1.5">
+                <AlertTriangle className="w-3.5 h-3.5" />
+                <span>Personnel safety protocol requires checking off all PPE items above before proceeding.</span>
+              </div>
+            )}
           </div>
         </div>
       </div>

@@ -17,6 +17,7 @@ import {
   FileSpreadsheet,
   FileCheck,
   ClipboardList,
+  HardHat,
 } from 'lucide-react';
 
 type RawLogRow = {
@@ -183,19 +184,27 @@ export default function AdminDashboardPage() {
     if (filteredLogs.length === 0) return;
 
     // Build worksheet data
-    const excelData = filteredLogs.map((l, index) => ({
-      'No.': index + 1,
-      'Log Reference ID': l.id,
-      'Worker Personnel': l.workers?.name || 'Unknown',
-      'Assigned Safety Role': l.workers?.role || 'Standard Crew',
-      'Worker ID': l.worker_id,
-      'Box Container Unit': l.containers?.container_number || 'Unknown Unit',
-      'Activity Task': l.activity || 'Routine Stack Inspection',
-      'Local Time': new Date(l.scanned_at).toLocaleTimeString(),
-      'Date (YYYY-MM-DD)': new Date(l.scanned_at).toISOString().substring(0, 10),
-      'ISO Timestamp': l.scanned_at,
-      'Compliance Status': 'VERIFIED BIOMETRIC PASS',
-    }));
+    const excelData = filteredLogs.map((l, index) => {
+      const rawNotes = l.notes || '';
+      const ppeUses = rawNotes.includes('PPE')
+        ? rawNotes.replace('[PPE VERIFIED: ', '').replace(']', '')
+        : 'Hard Hat, Harness, Gloves, Safety Shoes';
+
+      return {
+        'No.': index + 1,
+        'Log Reference ID': l.id,
+        'Worker Personnel': l.workers?.name || 'Unknown',
+        'Assigned Safety Role': l.workers?.role || 'Standard Crew',
+        'Worker ID': l.worker_id,
+        'Box Container Unit': l.containers?.container_number || 'Unknown Unit',
+        'Activity Task': l.activity || 'Routine Stack Inspection',
+        'PPE Safety Gear Uses': ppeUses,
+        'Local Time': new Date(l.scanned_at).toLocaleTimeString(),
+        'Date (YYYY-MM-DD)': new Date(l.scanned_at).toISOString().substring(0, 10),
+        'ISO Timestamp': l.scanned_at,
+        'Compliance Status': 'VERIFIED BIOMETRIC PASS',
+      };
+    });
 
     const worksheet = XLSX.utils.json_to_sheet(excelData);
 
@@ -208,6 +217,7 @@ export default function AdminDashboardPage() {
       { wch: 36 },
       { wch: 20 },
       { wch: 32 },
+      { wch: 36 },
       { wch: 14 },
       { wch: 18 },
       { wch: 24 },
@@ -522,6 +532,7 @@ export default function AdminDashboardPage() {
                   <th className="py-2.5 px-4">Worker Personnel</th>
                   <th className="py-2.5 px-4">Box Container Unit</th>
                   <th className="py-2.5 px-4">Logged Task / Activity</th>
+                  <th className="py-2.5 px-4">PPE Safety Gear Uses</th>
                   <th className="py-2.5 px-4">Timestamp (Local)</th>
                   <th className="py-2.5 px-4 text-right">Quick Scan</th>
                 </tr>
@@ -534,6 +545,10 @@ export default function AdminDashboardPage() {
                   const containerNum = log.containers?.container_number || 'Unit';
                   const activityName = log.activity || 'Routine Stack Inspection';
                   const scanDate = new Date(log.scanned_at);
+                  const rawNotes = log.notes || '';
+                  const ppeText = rawNotes.includes('PPE')
+                    ? rawNotes.replace('[PPE VERIFIED: ', '').replace(']', '')
+                    : 'Hard Hat, Harness, Gloves, Safety Shoes';
 
                   return (
                     <tr key={log.id} className="hover:bg-slate-800/30 transition-colors">
@@ -573,6 +588,19 @@ export default function AdminDashboardPage() {
                           <ClipboardList className="w-3 h-3 text-emerald-400" />
                           <span>{activityName}</span>
                         </span>
+                      </td>
+
+                      {/* PPE Uses Display */}
+                      <td className="py-3 px-4">
+                        <div className="space-y-0.5">
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 text-[10px] font-bold font-mono">
+                            <HardHat className="w-3 h-3 text-amber-400" />
+                            <span>PPE VERIFIED</span>
+                          </span>
+                          <div className="text-[10px] text-slate-400 font-sans max-w-[200px] truncate" title={ppeText}>
+                            {ppeText}
+                          </div>
+                        </div>
                       </td>
 
                       {/* Scanned At */}

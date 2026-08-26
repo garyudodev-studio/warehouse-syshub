@@ -74,6 +74,9 @@ export default function WorkerCheckInPage() {
 
   // Activity Selection — pre-selected from ?activity= param (set on /scan)
   const urlActivity = decodeURIComponent(searchParams?.get('activity') || '').trim();
+  const urlPpeVerified = searchParams?.get('ppe') === 'verified';
+  const urlPpeItems = decodeURIComponent(searchParams?.get('ppeItems') || '').trim();
+
   const isPresetActivity = PRESET_ACTIVITIES.some((a) => a.id === urlActivity);
   const [selectedActivity, setSelectedActivity] = useState<string>(
     urlActivity && isPresetActivity ? urlActivity : 'Routine Stack Inspection'
@@ -307,6 +310,9 @@ export default function WorkerCheckInPage() {
           const now = new Date();
           const isoString = now.toISOString();
           const targetContainerId = container?.id || '00000000-0000-0000-0000-000000000000';
+          const ppeNote = urlPpeVerified
+            ? `[PPE VERIFIED: ${urlPpeItems || '100% Safety Gear Certified'}]`
+            : undefined;
 
           const { data: logData } = await supabase
             .from('warehouse_access_logs')
@@ -314,6 +320,7 @@ export default function WorkerCheckInPage() {
               worker_id: match.worker.id,
               container_id: targetContainerId,
               activity: currentActivity,
+              notes: ppeNote,
               scanned_at: isoString,
             })
             .select()
@@ -356,7 +363,7 @@ export default function WorkerCheckInPage() {
       isActive = false;
       clearInterval(intervalId);
     };
-  }, [modelsReady, cameraState, verifiedWorker, workers, container, stopCamera, audioEnabled, selectedActivity, showCustomInput, customActivityInput]);
+  }, [modelsReady, cameraState, verifiedWorker, workers, container, stopCamera, audioEnabled, selectedActivity, showCustomInput, customActivityInput, urlPpeVerified, urlPpeItems]);
 
   // Manual fallback check-in handler
   const handleManualCheckIn = async (worker: WorkerRecord) => {
@@ -366,6 +373,9 @@ export default function WorkerCheckInPage() {
     const now = new Date();
     const isoString = now.toISOString();
     const targetContainerId = container?.id || '00000000-0000-0000-0000-000000000000';
+    const ppeNote = urlPpeVerified
+      ? `[PPE VERIFIED: ${urlPpeItems || '100% Safety Gear Certified'}]`
+      : undefined;
 
     const { data: logData } = await supabase
       .from('warehouse_access_logs')
@@ -373,6 +383,7 @@ export default function WorkerCheckInPage() {
         worker_id: worker.id,
         container_id: targetContainerId,
         activity: currentActivity,
+        notes: ppeNote,
         scanned_at: isoString,
       })
       .select()
@@ -429,6 +440,12 @@ export default function WorkerCheckInPage() {
             <span className="px-1.5 py-0.5 rounded bg-amber-500/15 border border-amber-500/40 text-amber-300 text-[10px] font-bold uppercase tracking-wider">
               STEP 2/2 · FACE VERIFICATION
             </span>
+            {urlPpeVerified && (
+              <span className="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-[10px] font-bold uppercase tracking-wider flex items-center gap-1">
+                <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+                <span>PPE VERIFIED (100% OSHA)</span>
+              </span>
+            )}
           </div>
 
           <div className="flex items-center gap-2">
@@ -626,6 +643,16 @@ export default function WorkerCheckInPage() {
                 <span className="font-bold text-xs text-amber-400">
                   {verifiedWorker.activity}
                 </span>
+              </div>
+
+              <div className="col-span-2 pt-2 border-t border-slate-700/40">
+                <span className="text-[10px] text-slate-400 uppercase block font-bold mb-0.5">
+                  VERIFIED PPE SAFETY GEAR USES
+                </span>
+                <div className="flex items-center gap-1.5 font-sans text-xs text-emerald-300 font-bold">
+                  <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0" />
+                  <span>{urlPpeItems || 'Hard Hat, Full Body Harness, Heavy Gloves, Safety Shoes'}</span>
+                </div>
               </div>
 
               <div className="col-span-2 pt-1 border-t border-slate-700/40 text-[11px] text-slate-400 flex items-center justify-between">

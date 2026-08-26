@@ -104,3 +104,76 @@ export function captureAndCompressCanvas(
     }
   });
 }
+
+/**
+ * Extracts bucket name and file path from a Supabase Storage URL or file path.
+ */
+export function parseBucketAndPathFromUrl(
+  urlOrPath: string,
+  defaultBucket: string = 'warehouse_avatars'
+): { bucket: string; path: string } | null {
+  if (!urlOrPath || urlOrPath.startsWith('data:')) return null;
+
+  try {
+    if (urlOrPath.includes('/storage/v1/object/')) {
+      const rawPath = urlOrPath.split('/storage/v1/object/')[1];
+      const segments = rawPath.split('?')[0].split('#')[0].split('/');
+      
+      // If segment[0] is 'public' or 'authenticated' or 'sign'
+      if (['public', 'authenticated', 'sign'].includes(segments[0])) {
+        segments.shift();
+      }
+      
+      if (segments.length >= 2) {
+        const bucket = segments[0];
+        const path = decodeURIComponent(segments.slice(1).join('/'));
+        return { bucket, path };
+      }
+    }
+
+    // Fallback: if filename matches avatar_... pattern or direct filename
+    const clean = urlOrPath.split('?')[0].split('#')[0];
+    const filename = clean.substring(clean.lastIndexOf('/') + 1);
+    if (filename && filename.includes('.')) {
+      return { bucket: defaultBucket, path: decodeURIComponent(filename) };
+    }
+  } catch (err) {
+    console.warn('Error parsing storage URL:', err);
+  }
+
+  return null;
+}
+
+/**
+ * Deletes a worker record from `warehouse_workers` table and automatically
+ * removes their photo file from the Supabase Storage bucket.
+ */
+export async function deleteWorkerWithStorage(workerId: string): Promise<{ error: any }> {
+  try {
+    const { data: worker } = await supabase
+      .from('warehouse_workers')
+      .select('photo_url')
+      .eq('id', workerId)
+      .maybeSingle();
+
+    if (worker?.photo_url) {
+      const storageInfo = parseBucketAndPathFromUrl(worker.photo_url, 'warehouse_avatars');
+      if (storageInfo) {
+        const { bucket, path } = storageInfo;
+        const { error: storageErr } = await supabase.storage.from(bucket).remove([path]);
+        if (storageErr) {
+          console.warn(`Bucket file deletion notice (${bucket}/${path}):`, storageErr);
+        } else {
+          console.log(`Automated cleanup: Deleted bucket file ${path} from ${bucket}`);
+        }
+      }
+    }
+
+    const { error } = await supabase.from('warehouse_workers').delete().eq('id', workerId);
+    return { error };
+  } catch (err) {
+    console.error('Error in deleteWorkerWithStorage:', err);
+    return { error: err };
+  }
+}
+

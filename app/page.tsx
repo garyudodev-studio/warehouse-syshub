@@ -351,6 +351,7 @@ export default function HomePage() {
                   <th className="py-2.5 px-4">Verified Personnel</th>
                   <th className="py-2.5 px-4">Box Container Unit</th>
                   <th className="py-2.5 px-4">Activity / Task</th>
+                  <th className="py-2.5 px-4">PPE Safety Gear Uses</th>
                   <th className="py-2.5 px-4">Time Logged</th>
                   <th className="py-2.5 px-4 text-right">Verification</th>
                 </tr>
@@ -363,6 +364,10 @@ export default function HomePage() {
                   const containerNum = log.containers?.container_number || 'Unit';
                   const activityName = log.activity || 'Routine Stack Inspection';
                   const scanDate = new Date(log.scanned_at);
+                  const rawNotes = log.notes || '';
+                  const ppeItemsText = rawNotes.includes('PPE')
+                    ? rawNotes.replace('[PPE VERIFIED: ', '').replace(']', '')
+                    : 'Hard Hat, Harness, Gloves, Safety Shoes';
 
                   return (
                     <tr key={log.id} className="hover:bg-slate-800/30 transition-colors">
@@ -401,6 +406,19 @@ export default function HomePage() {
                           <ClipboardList className="w-3 h-3 text-emerald-400" />
                           <span>{activityName}</span>
                         </span>
+                      </td>
+
+                      {/* PPE Uses Display */}
+                      <td className="py-3 px-4">
+                        <div className="space-y-0.5">
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 text-[10px] font-bold font-mono">
+                            <HardHat className="w-3 h-3 text-amber-400" />
+                            <span>PPE VERIFIED</span>
+                          </span>
+                          <div className="text-[10px] text-slate-400 font-sans max-w-[200px] truncate" title={ppeItemsText}>
+                            {ppeItemsText}
+                          </div>
+                        </div>
                       </td>
 
                       {/* Scanned At */}

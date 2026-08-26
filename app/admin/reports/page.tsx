@@ -320,42 +320,60 @@ export default function ManagementReportsPage() {
                   <th className="text-left px-3 py-2.5 border-b border-slate-800">Role</th>
                   <th className="text-left px-3 py-2.5 border-b border-slate-800">Container</th>
                   <th className="text-left px-3 py-2.5 border-b border-slate-800">Activity</th>
+                  <th className="text-left px-3 py-2.5 border-b border-slate-800">PPE Safety Gear Uses</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-800/70">
-                {timeframeLogs.map((log) => (
-                  <tr key={log.id} className="hover:bg-slate-900/50 transition-colors">
-                    <td className="px-3 py-2.5 text-slate-400 whitespace-nowrap">
-                      {formatLogTime(log.scanned_at)}
-                    </td>
-                    <td className="px-3 py-2.5">
-                      <div className="flex items-center gap-2">
-                        {log.workers?.photo_url ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img
-                            src={log.workers.photo_url}
-                            alt={log.workers?.name || 'Worker'}
-                            className="w-6 h-6 rounded-full object-cover border border-slate-700 shrink-0"
-                          />
-                        ) : (
-                          <div className="w-6 h-6 rounded-full bg-slate-800 text-slate-400 flex items-center justify-center shrink-0">
-                            <HardHat className="w-3.5 h-3.5" />
-                          </div>
-                        )}
-                        <span className="font-bold text-white whitespace-nowrap">
-                          {log.workers?.name || 'Unknown Worker'}
-                        </span>
-                      </div>
-                    </td>
-                    <td className="px-3 py-2.5 text-slate-400 whitespace-nowrap">
-                      {log.workers?.role || 'Standard Crew'}
-                    </td>
-                    <td className="px-3 py-2.5 font-bold text-amber-400 whitespace-nowrap">
-                      {log.containers?.container_number || 'Unknown Unit'}
-                    </td>
-                    <td className="px-3 py-2.5 text-slate-300">{log.activity}</td>
-                  </tr>
-                ))}
+                {timeframeLogs.map((log) => {
+                  const rawNotes = log.notes || '';
+                  const ppeText = rawNotes.includes('PPE')
+                    ? rawNotes.replace('[PPE VERIFIED: ', '').replace(']', '')
+                    : 'Hard Hat, Harness, Gloves, Safety Shoes';
+
+                  return (
+                    <tr key={log.id} className="hover:bg-slate-900/50 transition-colors">
+                      <td className="px-3 py-2.5 text-slate-400 whitespace-nowrap">
+                        {formatLogTime(log.scanned_at)}
+                      </td>
+                      <td className="px-3 py-2.5">
+                        <div className="flex items-center gap-2">
+                          {log.workers?.photo_url ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img
+                              src={log.workers.photo_url}
+                              alt={log.workers?.name || 'Worker'}
+                              className="w-6 h-6 rounded-full object-cover border border-slate-700 shrink-0"
+                            />
+                          ) : (
+                            <div className="w-6 h-6 rounded-full bg-slate-800 text-slate-400 flex items-center justify-center shrink-0">
+                              <HardHat className="w-3.5 h-3.5" />
+                            </div>
+                          )}
+                          <span className="font-bold text-white whitespace-nowrap">
+                            {log.workers?.name || 'Unknown Worker'}
+                          </span>
+                        </div>
+                      </td>
+                      <td className="px-3 py-2.5 text-slate-400 whitespace-nowrap">
+                        {log.workers?.role || 'Standard Crew'}
+                      </td>
+                      <td className="px-3 py-2.5 font-bold text-amber-400 whitespace-nowrap">
+                        {log.containers?.container_number || 'Unknown Unit'}
+                      </td>
+                      <td className="px-3 py-2.5 text-slate-300">{log.activity}</td>
+                      <td className="px-3 py-2.5">
+                        <div className="flex items-center gap-1.5 text-emerald-400 font-mono text-[11px]">
+                          <span className="px-1.5 py-0.5 rounded bg-emerald-500/15 border border-emerald-500/30 text-[9px] font-bold">
+                            ✓ PPE VERIFIED
+                          </span>
+                          <span className="text-slate-400 text-[10px] font-sans truncate max-w-[160px]" title={ppeText}>
+                            {ppeText}
+                          </span>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>

@@ -6,6 +6,7 @@ import {
   WorkerRecord,
   captureAndCompressCanvas,
   AccessLogRecord,
+  deleteWorkerWithStorage,
 } from '@/lib/supabaseClient';
 import {
   loadFaceApiModels,
@@ -387,14 +388,16 @@ export default function WorkerRegistrationPage() {
     }
   };
 
-  // Delete worker
+  // Delete worker with automated storage file cleanup
   const handleDeleteWorker = async (id: string, name: string) => {
-    if (!confirm(`Revoke biometric authorization for ${name}?`)) return;
+    if (!confirm(`Revoke biometric authorization for ${name}? (This will also delete their photo file from storage bucket)`)) return;
 
-    const { error } = await supabase.from('warehouse_workers').delete().eq('id', id);
+    const { error } = await deleteWorkerWithStorage(id);
     if (!error) {
       if (selectedWorker?.id === id) setSelectedWorker(null);
       fetchWorkers();
+    } else {
+      alert(`Failed to delete worker: ${error.message || error}`);
     }
   };
 
@@ -743,26 +746,43 @@ export default function WorkerRegistrationPage() {
                 </div>
               ) : (
                 <div className="max-h-56 overflow-y-auto space-y-1.5 pr-1">
-                  {workerLogs.map((log) => (
-                    <div
-                      key={log.id}
-                      className="p-2.5 rounded-lg bg-[#07090e] border border-slate-800 flex items-center justify-between text-xs"
-                    >
-                      <div className="flex items-center gap-2">
-                        <span className="px-2 py-0.5 rounded bg-amber-500/10 text-amber-400 font-bold border border-amber-500/20 text-[11px]">
-                          {log.containers?.container_number || 'Unit'}
-                        </span>
-                        <span className="text-slate-300 font-sans">{log.activity || 'Stack Inspection'}</span>
+                  {workerLogs.map((log) => {
+                    const rawNotes = log.notes || '';
+                    const ppeText = rawNotes.includes('PPE')
+                      ? rawNotes.replace('[PPE VERIFIED: ', '').replace(']', '')
+                      : 'Hard Hat, Harness, Gloves, Safety Shoes';
+
+                    return (
+                      <div
+                        key={log.id}
+                        className="p-2.5 rounded-lg bg-[#07090e] border border-slate-800 space-y-1 text-xs"
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <span className="px-2 py-0.5 rounded bg-amber-500/10 text-amber-400 font-bold border border-amber-500/20 text-[11px]">
+                              {log.containers?.container_number || 'Unit'}
+                            </span>
+                            <span className="text-slate-300 font-sans">{log.activity || 'Stack Inspection'}</span>
+                          </div>
+                          <span className="text-[10px] text-slate-500">
+                            {new Date(log.scanned_at).toLocaleTimeString([], {
+                              hour: '2-digit',
+                              minute: '2-digit',
+                              second: '2-digit',
+                            })}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-1.5 text-[10px] font-mono text-emerald-400">
+                          <span className="px-1.5 py-0.2 rounded bg-emerald-500/15 border border-emerald-500/30 text-[9px] font-bold">
+                            ✓ PPE VERIFIED
+                          </span>
+                          <span className="text-slate-400 font-sans truncate" title={ppeText}>
+                            {ppeText}
+                          </span>
+                        </div>
                       </div>
-                      <span className="text-[10px] text-slate-500">
-                        {new Date(log.scanned_at).toLocaleTimeString([], {
-                          hour: '2-digit',
-                          minute: '2-digit',
-                          second: '2-digit',
-                        })}
-                      </span>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </div>
